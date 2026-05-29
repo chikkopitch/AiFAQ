@@ -1,0 +1,8 @@
+.env
+data/leads.csv
+app/data/leads.csv
+__pycache__/
+.venv/
+*.pyc
+.idea/
+.vscode/
