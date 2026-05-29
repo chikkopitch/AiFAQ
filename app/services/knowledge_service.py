@@ -1,3 +1,4 @@
+import re
 from os import getenv
 from pathlib import Path
 
@@ -5,6 +6,26 @@ DEFAULT_KNOWLEDGE_BASE_PATH = "/app/data/knowledge_base.md"
 KNOWLEDGE_BASE_PATH_ENV = "KNOWLEDGE_BASE_PATH"
 KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE = (
     "База знаний временно недоступна. Передайте вопрос менеджеру."
+)
+CONTACTS_UNAVAILABLE_MESSAGE = (
+    "Контакты временно недоступны. Передайте вопрос менеджеру."
+)
+INTERNAL_CONTACTS_PHRASES = (
+    "замените",
+    "заменить",
+    "пока не заполн",
+    "пока не указаны",
+    "укажите номер",
+    "укажите whatsapp",
+    "укажите адрес",
+    "укажите сайт",
+    "укажите актуальный",
+    "если клиент просит",
+    "пока использовать",
+    "реальные данные не заполнены",
+    "такой ответ",
+    "нужно сказать",
+    "уточните их у менеджера",
 )
 
 
@@ -59,9 +80,11 @@ class KnowledgeService:
         contacts_section = self._extract_section(knowledge_base, "Контакты")
 
         if contacts_section:
-            return contacts_section
+            contacts = self._format_contacts(contacts_section)
+            if contacts:
+                return contacts
 
-        return "Контакты не указаны в базе знаний. Лучше уточнить их у менеджера."
+        return CONTACTS_UNAVAILABLE_MESSAGE
 
     @staticmethod
     def _extract_section(markdown: str, title: str) -> str | None:
@@ -96,3 +119,37 @@ class KnowledgeService:
         if len(parts) == 2 and parts[0].rstrip(".").isdigit():
             return parts[1].strip().lower()
         return heading.strip().lower()
+
+    @staticmethod
+    def _format_contacts(markdown: str) -> str | None:
+        formatted_lines: list[str] = []
+
+        for line in markdown.splitlines():
+            stripped = line.strip()
+            normalized = stripped.lower()
+
+            if not stripped or stripped.startswith("#"):
+                continue
+
+            if any(phrase in normalized for phrase in INTERNAL_CONTACTS_PHRASES):
+                continue
+
+            stripped = stripped.lstrip("-* ").strip()
+            stripped = re.sub(r"[*_`#]+", "", stripped).strip()
+            stripped = KnowledgeService._strip_wrapping_quotes(stripped)
+
+            if stripped:
+                formatted_lines.append(stripped)
+
+        contacts = "\n".join(formatted_lines).strip()
+        return contacts or None
+
+    @staticmethod
+    def _strip_wrapping_quotes(text: str) -> str:
+        quote_pairs = (("\"", "\""), ("'", "'"), ("«", "»"))
+
+        for opening_quote, closing_quote in quote_pairs:
+            if text.startswith(opening_quote) and text.endswith(closing_quote):
+                return text[1:-1].strip()
+
+        return text
