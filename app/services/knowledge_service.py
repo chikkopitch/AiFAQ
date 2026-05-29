@@ -1,27 +1,40 @@
+from os import getenv
 from pathlib import Path
 
+DEFAULT_KNOWLEDGE_BASE_PATH = "/app/data/knowledge_base.md"
+KNOWLEDGE_BASE_PATH_ENV = "KNOWLEDGE_BASE_PATH"
 KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE = (
-    "База знаний пока не заполнена. Лучше уточнить вопрос у менеджера."
+    "База знаний временно недоступна. Передайте вопрос менеджеру."
 )
 
 
+def load_knowledge_base(knowledge_base_path: str | None = None) -> str:
+    knowledge_base_path = Path(
+        knowledge_base_path
+        or getenv(KNOWLEDGE_BASE_PATH_ENV)
+        or DEFAULT_KNOWLEDGE_BASE_PATH
+    )
+
+    if not knowledge_base_path.exists():
+        return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
+
+    try:
+        content = knowledge_base_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
+
+    if not content:
+        return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
+
+    return content
+
+
 class KnowledgeService:
-    def __init__(self, knowledge_base_path: str = "data/knowledge_base.md") -> None:
-        self.knowledge_base_path = Path(knowledge_base_path)
+    def __init__(self, knowledge_base_path: str | None = None) -> None:
+        self.knowledge_base_path = knowledge_base_path
 
     def read_knowledge_base(self) -> str:
-        if not self.knowledge_base_path.exists():
-            return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
-
-        try:
-            content = self.knowledge_base_path.read_text(encoding="utf-8").strip()
-        except OSError:
-            return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
-
-        if not content:
-            return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
-
-        return content
+        return load_knowledge_base(self.knowledge_base_path)
 
     def get_contacts(self) -> str:
         knowledge_base = self.read_knowledge_base()
