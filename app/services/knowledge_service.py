@@ -9,24 +9,42 @@ KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE = (
 
 
 def load_knowledge_base(knowledge_base_path: str | None = None) -> str:
-    knowledge_base_path = Path(
+    for path in _knowledge_base_path_candidates(knowledge_base_path):
+        if not path.exists():
+            continue
+
+        try:
+            content = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+
+        if content:
+            return content
+
+    return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
+
+
+def _knowledge_base_path_candidates(
+    knowledge_base_path: str | None = None,
+) -> tuple[Path, ...]:
+    configured_path = str(
         knowledge_base_path
         or getenv(KNOWLEDGE_BASE_PATH_ENV)
         or DEFAULT_KNOWLEDGE_BASE_PATH
+    ).strip().strip("\"'")
+    service_file = Path(__file__).resolve()
+    app_dir = service_file.parents[1]
+    project_dir = service_file.parents[2]
+
+    candidates = (
+        Path(configured_path),
+        Path(DEFAULT_KNOWLEDGE_BASE_PATH),
+        Path.cwd() / "data" / "knowledge_base.md",
+        project_dir / "data" / "knowledge_base.md",
+        app_dir / "data" / "knowledge_base.md",
     )
 
-    if not knowledge_base_path.exists():
-        return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
-
-    try:
-        content = knowledge_base_path.read_text(encoding="utf-8").strip()
-    except OSError:
-        return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
-
-    if not content:
-        return KNOWLEDGE_BASE_UNAVAILABLE_MESSAGE
-
-    return content
+    return tuple(dict.fromkeys(candidates))
 
 
 class KnowledgeService:
