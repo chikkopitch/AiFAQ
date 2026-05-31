@@ -46,8 +46,8 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 OPENROUTER_MODEL=openai/gpt-oss-120b:free
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 KNOWLEDGE_BASE_PATH=/app/data/knowledge_base.md
-USER_ID=8570106541
-BOT_ADMIN_IDS=
+BOT_ADMIN_IDS=8570106541
+USER_ID=
 ```
 
 Не добавляйте настоящий `.env` в git. В нем лежат секреты. Не храните текст базы знаний в `.env`: в переменной `KNOWLEDGE_BASE_PATH` должен быть только путь к markdown-файлу.
@@ -64,17 +64,19 @@ BOT_ADMIN_IDS=
 
 `KNOWLEDGE_BASE_PATH` - путь к markdown-файлу базы знаний. По умолчанию используется `/app/data/knowledge_base.md`.
 
-`USER_ID` - основной Telegram ID получателя уведомлений о заявках. Для текущей настройки используется:
+`BOT_ADMIN_IDS` - Telegram ID админов для уведомлений о заявках. Для текущей настройки используется:
 
 ```env
-USER_ID=8570106541
+BOT_ADMIN_IDS=8570106541
 ```
 
-`BOT_ADMIN_IDS` - запасной вариант для Telegram ID админов, если `USER_ID` не указан. Можно оставить пустым. Если админов несколько, укажите через запятую:
+Если админов несколько, укажите их ID через запятую:
 
 ```env
 BOT_ADMIN_IDS=123456789,987654321
 ```
+
+`USER_ID` - запасной вариант для совместимости, если `BOT_ADMIN_IDS` не указан. На Bothost используйте `BOT_ADMIN_IDS`: платформа добавляет собственную системную переменную `USER_ID`, значение которой может не быть числовым Telegram ID.
 
 ## Как установить зависимости
 
@@ -204,7 +206,7 @@ pip install -r requirements.txt
 
 ### Бот не отвечает на заявки админу
 
-Проверьте `USER_ID` или `BOT_ADMIN_IDS`. Там должны быть Telegram ID админов, а не username.
+Проверьте `BOT_ADMIN_IDS`. Там должны быть Telegram ID админов, а не username. Если `BOT_ADMIN_IDS` не указан, приложение использует запасную переменную `USER_ID`.
 
 ## Полезные ссылки
 

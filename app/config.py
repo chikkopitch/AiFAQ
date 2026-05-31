@@ -31,11 +31,11 @@ class Settings:
         self.openrouter_api_key = env_values["OPENROUTER_API_KEY"]
         self.openrouter_model = env_values["OPENROUTER_MODEL"]
         self.openrouter_base_url = env_values["OPENROUTER_BASE_URL"]
-        user_id = getenv("USER_ID")
+        bot_admin_ids = getenv("BOT_ADMIN_IDS")
         admin_ids = (
-            user_id
-            if user_id is not None and user_id.strip()
-            else getenv("BOT_ADMIN_IDS")
+            bot_admin_ids
+            if bot_admin_ids is not None and bot_admin_ids.strip()
+            else getenv("USER_ID")
         )
         self.bot_admin_ids = self._parse_admin_ids(admin_ids)
 
