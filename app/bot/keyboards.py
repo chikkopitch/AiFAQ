@@ -11,7 +11,10 @@ def main_keyboard() -> ReplyKeyboardMarkup:
         [
             KeyboardButton(text="/contacts"),
             KeyboardButton(text="/help"),
-        ]
+        ],
+        [
+            KeyboardButton(text="Оставить заявку"),
+        ],
     ]
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
