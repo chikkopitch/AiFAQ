@@ -9,9 +9,7 @@ LEADS_CSV_HEADERS = (
     "username",
     "name",
     "phone",
-    "location",
-    "service",
-    "description",
+    "task",
 )
 
 
@@ -25,9 +23,7 @@ class LeadService:
         username: str,
         name: str,
         phone: str,
-        location: str,
-        service: str,
-        description: str,
+        task: str,
     ) -> dict[str, str]:
         self._ensure_csv_exists()
 
@@ -37,9 +33,7 @@ class LeadService:
             "username": username,
             "name": name,
             "phone": phone,
-            "location": location,
-            "service": service,
-            "description": description,
+            "task": task,
         }
 
         with self.leads_path.open("a", encoding="utf-8", newline="") as file:

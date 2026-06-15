@@ -29,10 +29,13 @@ LONG_TEXT_MESSAGE = (
 )
 MAX_USER_QUESTION_LENGTH = 4000
 LEAD_REQUEST_PHRASES = (
+    "оставить заявку",
     "хочу заявку",
-    "нужен расчет",
-    "нужен расчёт",
-    "нужна консультация",
+    "оставьте заявку",
+    "запишите меня",
+    "хочу заказать",
+    "вызвать мастера",
+    "нужна бригада",
 )
 
 
@@ -172,7 +175,7 @@ async def lead_name_received(message: Message, state: FSMContext) -> None:
     log_message_event(message, "lead_name_received")
     await state.update_data(name=message.text.strip())
     await state.set_state(LeadForm.phone)
-    await message.answer("Укажите телефон для связи.")
+    await message.answer("Укажите ваш номер телефона.")
 
 
 @router.message(LeadForm.phone, F.text)
@@ -184,34 +187,46 @@ async def lead_phone_received(message: Message, state: FSMContext) -> None:
         extra=f"masked_phone={mask_phone(phone)}",
     )
     await state.update_data(phone=phone)
-    await state.set_state(LeadForm.location)
-    await message.answer("Укажите город или район объекта.")
+    await state.set_state(LeadForm.task)
+    await message.answer("Что нужно сделать? Опишите кратко.")
 
 
-@router.message(LeadForm.location, F.text)
-async def lead_location_received(message: Message, state: FSMContext) -> None:
-    log_message_event(message, "lead_location_received")
-    await state.update_data(location=message.text.strip())
-    await state.set_state(LeadForm.service)
-    await message.answer("Какая услуга нужна?")
+@router.message(LeadForm.task, F.text)
+async def lead_task_received(message: Message, state: FSMContext) -> None:
+    log_message_event(message, "lead_task_received")
+    await state.update_data(task=message.text.strip())
+    await state.set_state(LeadForm.confirm)
+
+    data = await state.get_data()
+    summary = (
+        "Проверьте данные:\n"
+        f"- Имя: {data['name']}\n"
+        f"- Телефон: {data['phone']}\n"
+        f"- Задача: {data['task']}\n"
+        "Всё верно? Отправляем?"
+    )
+    await message.answer(summary)
 
 
-@router.message(LeadForm.service, F.text)
-async def lead_service_received(message: Message, state: FSMContext) -> None:
-    log_message_event(message, "lead_service_received")
-    await state.update_data(service=message.text.strip())
-    await state.set_state(LeadForm.description)
-    await message.answer("Кратко опишите задачу.")
-
-
-@router.message(LeadForm.description, F.text)
-async def lead_description_received(
+@router.message(LeadForm.confirm, F.text)
+async def lead_confirm_received(
     message: Message,
     state: FSMContext,
     lead_service: LeadService,
     bot_admin_ids: tuple[int, ...],
 ) -> None:
-    log_message_event(message, "lead_description_received")
+    log_message_event(message, "lead_confirm_received")
+    text = (message.text or "").strip().lower()
+
+    confirm_phrases = ("да", "верно", "отправляй", "ок", "yes", "ага", "давай", "отправь")
+    if not any(phrase in text for phrase in confirm_phrases):
+        await state.clear()
+        await message.answer(
+            "Заявка отменена. Если понадобится — напишите снова.",
+            reply_markup=main_keyboard(),
+        )
+        return
+
     data = await state.get_data()
     await state.clear()
 
@@ -220,13 +235,11 @@ async def lead_description_received(
         username=message.from_user.username or "" if message.from_user else "",
         name=data["name"],
         phone=data["phone"],
-        location=data["location"],
-        service=data["service"],
-        description=message.text.strip(),
+        task=data["task"],
     )
 
     await message.answer(
-        "Спасибо, заявка принята. Менеджер свяжется с вами.",
+        "Заявка принята! Менеджер свяжется с вами в ближайшее время.",
         reply_markup=main_keyboard(),
     )
     await notify_admins(message, lead, bot_admin_ids)
@@ -315,10 +328,7 @@ async def global_error_handler(event: ErrorEvent) -> bool:
 async def start_lead_form(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(LeadForm.name)
-    await message.answer(
-        "Давайте оформим заявку. Как вас зовут?\n\n"
-        "Чтобы отменить заявку, отправьте /cancel."
-    )
+    await message.answer("Как вас зовут?")
 
 
 async def notify_admins(
@@ -331,15 +341,12 @@ async def notify_admins(
 
     username = f"@{lead['username']}" if lead["username"] else "не указан"
     text = (
-        "Новая заявка\n\n"
-        f"Дата: {lead['created_at']}\n"
-        f"Telegram ID: {lead['telegram_id']}\n"
-        f"Username: {username}\n"
-        f"\nИмя: {lead['name']}\n"
-        f"Телефон: {lead['phone']}\n"
-        f"Город/район: {lead['location']}\n"
-        f"Услуга: {lead['service']}\n"
-        f"Описание: {lead['description']}"
+        "\U0001f514 НОВАЯ ЗАЯВКА\n\n"
+        f"\U0001f464 Имя: {lead['name']}\n"
+        f"\U0001f4de Телефон: {lead['phone']}\n"
+        f"\U0001f527 Задача: {lead['task']}\n"
+        f"\U0001f517 Telegram: {username} (ID: {lead['telegram_id']})\n"
+        f"\U0001f4c5 {lead['created_at']}"
     )
 
     for admin_id in bot_admin_ids:
